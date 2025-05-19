@@ -75,7 +75,7 @@ export default function OrderCard({ order }: OrderCardProps) {
       
       <div className="p-4">
         <div className="space-y-2 mb-4">
-          {order.items.map((item) => (
+          {order.items?.map((item) => (
             <div 
               key={item.id}
               className={`flex justify-between py-1 border-b ${statusColors.divider}`}

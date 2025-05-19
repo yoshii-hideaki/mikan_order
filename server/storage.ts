@@ -58,52 +58,64 @@ export class MemStorage implements IStorage {
   private initializeMenuItems() {
     const defaultItems: InsertMenuItem[] = [
       {
-        name: "ラーメン",
-        price: 85000, // ¥850
-        imageUrl: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624",
-        category: "main",
+        name: "獺祭 純米大吟醸",
+        price: 98000, // ¥980
+        imageUrl: "",
+        category: "日本酒",
       },
       {
-        name: "ハンバーガー",
-        price: 95000, // ¥950
-        imageUrl: "https://images.unsplash.com/photo-1550317138-10000687a72b",
-        category: "main",
-      },
-      {
-        name: "寿司セット",
+        name: "十四代 秘蔵酒",
         price: 120000, // ¥1200
-        imageUrl: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c",
-        category: "main",
+        imageUrl: "",
+        category: "日本酒",
       },
       {
-        name: "サラダ",
-        price: 55000, // ¥550
-        imageUrl: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd",
-        category: "side",
+        name: "久保田 千寿",
+        price: 75000, // ¥750
+        imageUrl: "",
+        category: "日本酒",
       },
       {
-        name: "ビール",
-        price: 55000, // ¥550
-        imageUrl: "https://images.unsplash.com/photo-1608270586620-248524c67de9",
-        category: "drink",
+        name: "黒龍 純米吟醸",
+        price: 85000, // ¥850
+        imageUrl: "",
+        category: "日本酒",
       },
       {
-        name: "コーヒー",
-        price: 38000, // ¥380
-        imageUrl: "https://images.unsplash.com/photo-1515442261605-65987783cb6a",
-        category: "drink",
+        name: "梅酒 ロック",
+        price: 65000, // ¥650
+        imageUrl: "",
+        category: "梅酒",
       },
       {
-        name: "パスタ",
-        price: 95000, // ¥950
-        imageUrl: "https://images.unsplash.com/photo-1563379926898-05f4575a45d8",
-        category: "main",
+        name: "梅酒 ソーダ",
+        price: 70000, // ¥700
+        imageUrl: "",
+        category: "梅酒",
       },
       {
-        name: "ケーキ",
-        price: 48000, // ¥480
-        imageUrl: "https://images.unsplash.com/photo-1566121933407-3c7ccdd26763",
-        category: "side",
+        name: "モヒート",
+        price: 85000, // ¥850
+        imageUrl: "",
+        category: "カクテル",
+      },
+      {
+        name: "マティーニ",
+        price: 90000, // ¥900
+        imageUrl: "",
+        category: "カクテル",
+      },
+      {
+        name: "赤ワインサングリア",
+        price: 78000, // ¥780
+        imageUrl: "",
+        category: "サングリア",
+      },
+      {
+        name: "白ワインサングリア",
+        price: 78000, // ¥780
+        imageUrl: "",
+        category: "サングリア",
       },
     ];
 

@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useOrderStore } from "@/hooks/use-order-store";
 
-type CategoryType = "all" | "main" | "side" | "drink";
+type CategoryType = "all" | "日本酒" | "梅酒" | "カクテル" | "サングリア";
 
 export default function MenuGrid() {
   const [activeCategory, setActiveCategory] = useState<CategoryType>("all");
@@ -48,28 +48,36 @@ export default function MenuGrid() {
               全て
             </Button>
             <Button
-              variant={activeCategory === "main" ? "default" : "outline"}
+              variant={activeCategory === "日本酒" ? "default" : "outline"}
               size="sm"
               className="rounded-full"
-              onClick={() => handleCategoryClick("main")}
+              onClick={() => handleCategoryClick("日本酒")}
             >
-              主菜
+              日本酒
             </Button>
             <Button
-              variant={activeCategory === "side" ? "default" : "outline"}
+              variant={activeCategory === "梅酒" ? "default" : "outline"}
               size="sm"
               className="rounded-full"
-              onClick={() => handleCategoryClick("side")}
+              onClick={() => handleCategoryClick("梅酒")}
             >
-              副菜
+              梅酒
             </Button>
             <Button
-              variant={activeCategory === "drink" ? "default" : "outline"}
+              variant={activeCategory === "カクテル" ? "default" : "outline"}
               size="sm"
               className="rounded-full"
-              onClick={() => handleCategoryClick("drink")}
+              onClick={() => handleCategoryClick("カクテル")}
             >
-              飲み物
+              カクテル
+            </Button>
+            <Button
+              variant={activeCategory === "サングリア" ? "default" : "outline"}
+              size="sm"
+              className="rounded-full"
+              onClick={() => handleCategoryClick("サングリア")}
+            >
+              サングリア
             </Button>
           </div>
         </div>
@@ -92,12 +100,7 @@ export default function MenuGrid() {
                 className="p-3 border rounded-lg hover:border-primary cursor-pointer transition-all"
                 onClick={() => handleMenuItemClick(item)}
               >
-                <img
-                  src={item.imageUrl}
-                  alt={item.name}
-                  className="w-full h-24 object-cover rounded mb-2"
-                />
-                <div className="font-medium text-gray-800">{item.name}</div>
+                <div className="font-medium text-gray-800 mb-2">{item.name}</div>
                 <div className="text-gray-600 text-sm">{formatPrice(item.price)}</div>
               </div>
             ))}
