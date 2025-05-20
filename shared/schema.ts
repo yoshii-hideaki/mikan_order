@@ -50,7 +50,7 @@ export const insertOrderItemSchema = createInsertSchema(orderItems).pick({
 });
 
 // Status type for orders
-export const OrderStatus = z.enum(["new", "in-progress", "ready"]);
+export const OrderStatus = z.enum(["in-progress", "ready"]);
 export type OrderStatus = z.infer<typeof OrderStatus>;
 
 // Types for our schemas

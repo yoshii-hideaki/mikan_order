@@ -157,7 +157,7 @@ export class MemStorage implements IStorage {
       ...orderData,
       id,
       orderNumber,
-      status: "new", 
+      status: "in-progress", 
       createdAt: now,
       updatedAt: now
     };

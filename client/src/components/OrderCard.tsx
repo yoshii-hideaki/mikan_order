@@ -11,12 +11,6 @@ type OrderCardProps = {
 };
 
 const statusColorMap = {
-  "new": {
-    bg: "bg-red-100",
-    border: "border-red-500",
-    header: "bg-red-500",
-    divider: "border-red-200",
-  },
   "in-progress": {
     bg: "bg-yellow-100",
     border: "border-yellow-500",
@@ -34,9 +28,10 @@ const statusColorMap = {
 export default function OrderCard({ order }: OrderCardProps) {
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
   
-  const statusColors = statusColorMap[order.status];
+  // statusColorMapが持つキーとして保証されたOrderStatusのみを使用
+  const statusColors = statusColorMap[order.status as "in-progress" | "ready"];
   
-  const handleStatusChange = async (newStatus: "in-progress" | "ready") => {
+  const handleStatusChange = async (newStatus: OrderStatus) => {
     try {
       await updateOrderStatus(order.id, newStatus);
     } catch (error) {
@@ -87,14 +82,7 @@ export default function OrderCard({ order }: OrderCardProps) {
         </div>
         
         <div className="flex justify-between mt-4">
-          {order.status === "new" ? (
-            <Button 
-              className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg"
-              onClick={() => handleStatusChange("in-progress")}
-            >
-              調理開始
-            </Button>
-          ) : order.status === "in-progress" ? (
+          {order.status === "in-progress" ? (
             <Button 
               className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
               onClick={() => handleStatusChange("ready")}

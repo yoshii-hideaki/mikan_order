@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 type FilterStatus = "all" | OrderStatus;
 
 export default function KitchenView() {
-  const [filter, setFilter] = useState<FilterStatus>("all");
+  const [filter, setFilter] = useState<FilterStatus>("in-progress");
   
   const { data: orders, isLoading } = useQuery<OrderWithItems[]>({
     queryKey: ["/api/orders"],
@@ -67,13 +67,6 @@ export default function KitchenView() {
           onClick={() => setFilter("all")}
         >
           すべて
-        </Button>
-        <Button
-          variant={filter === "new" ? "default" : "secondary"}
-          className={filter === "new" ? "" : "bg-red-500 text-white"}
-          onClick={() => setFilter("new")}
-        >
-          新規注文
         </Button>
         <Button
           variant={filter === "in-progress" ? "default" : "secondary"}

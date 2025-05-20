@@ -7,7 +7,6 @@ const statusBadgeVariants = cva(
   {
     variants: {
       variant: {
-        new: "bg-red-100 text-red-800 border-red-200",
         "in-progress": "bg-yellow-100 text-yellow-800 border-yellow-200",
         ready: "bg-green-100 text-green-800 border-green-200",
       },
@@ -17,14 +16,13 @@ const statusBadgeVariants = cva(
       },
     },
     defaultVariants: {
-      variant: "new",
+      variant: "in-progress",
       animated: false,
     },
   }
 );
 
 const statusTextMap: Record<OrderStatus, string> = {
-  new: "新規",
   "in-progress": "調理中",
   ready: "完了",
 };
