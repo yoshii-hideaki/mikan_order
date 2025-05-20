@@ -58,64 +58,46 @@ export class MemStorage implements IStorage {
   private initializeMenuItems() {
     const defaultItems: InsertMenuItem[] = [
       {
-        name: "獺祭 純米大吟醸",
-        price: 98000, // ¥980
-        imageUrl: "",
-        category: "日本酒",
-      },
-      {
-        name: "十四代 秘蔵酒",
-        price: 120000, // ¥1200
-        imageUrl: "",
-        category: "日本酒",
-      },
-      {
-        name: "久保田 千寿",
+        name: "日本酒みかんロック",
         price: 75000, // ¥750
         imageUrl: "",
-        category: "日本酒",
+        category: "お酒",
       },
       {
-        name: "黒龍 純米吟醸",
+        name: "太幸ワイン",
+        price: 80000, // ¥800
+        imageUrl: "",
+        category: "お酒",
+      },
+      {
+        name: "太幸ワインサングリア",
         price: 85000, // ¥850
         imageUrl: "",
-        category: "日本酒",
+        category: "お酒",
       },
       {
-        name: "梅酒 ロック",
-        price: 65000, // ¥650
+        name: "ブラッドオレンジ梅酒",
+        price: 78000, // ¥780
         imageUrl: "",
-        category: "梅酒",
+        category: "お酒",
       },
       {
-        name: "梅酒 ソーダ",
+        name: "カシス河内晩柑",
+        price: 78000, // ¥780
+        imageUrl: "",
+        category: "お酒",
+      },
+      {
+        name: "レモン酎ハイ",
         price: 70000, // ¥700
         imageUrl: "",
-        category: "梅酒",
+        category: "お酒",
       },
       {
-        name: "モヒート",
-        price: 85000, // ¥850
+        name: "河内晩柑ジュース",
+        price: 55000, // ¥550
         imageUrl: "",
-        category: "カクテル",
-      },
-      {
-        name: "マティーニ",
-        price: 90000, // ¥900
-        imageUrl: "",
-        category: "カクテル",
-      },
-      {
-        name: "赤ワインサングリア",
-        price: 78000, // ¥780
-        imageUrl: "",
-        category: "サングリア",
-      },
-      {
-        name: "白ワインサングリア",
-        price: 78000, // ¥780
-        imageUrl: "",
-        category: "サングリア",
+        category: "ソフトドリンク",
       },
     ];
 
