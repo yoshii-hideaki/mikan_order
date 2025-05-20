@@ -1,4 +1,4 @@
-import { OrderWithItems } from "@shared/schema";
+import { OrderWithItems, OrderStatus } from "@shared/schema";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Clock } from "lucide-react";
@@ -28,10 +28,12 @@ const statusColorMap = {
 export default function OrderCard({ order }: OrderCardProps) {
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
   
-  // statusColorMapが持つキーとして保証されたOrderStatusのみを使用
-  const statusColors = statusColorMap[order.status as "in-progress" | "ready"];
+  // デフォルト値を設定して、存在しないステータスでもエラーにならないようにする
+  const status = (order.status === "in-progress" || order.status === "ready") ? 
+                  order.status as "in-progress" | "ready" : "in-progress";
+  const statusColors = statusColorMap[status];
   
-  const handleStatusChange = async (newStatus: OrderStatus) => {
+  const handleStatusChange = async (newStatus: "in-progress" | "ready") => {
     try {
       await updateOrderStatus(order.id, newStatus);
     } catch (error) {
@@ -57,8 +59,8 @@ export default function OrderCard({ order }: OrderCardProps) {
         <div className="flex items-center">
           <span className="font-bold text-lg">{order.orderNumber}</span>
           <StatusBadge 
-            status={order.status} 
-            animated={order.status === "new"} 
+            status={status} 
+            animated={status === "in-progress"} 
             className="ml-2"
           />
         </div>
@@ -82,7 +84,7 @@ export default function OrderCard({ order }: OrderCardProps) {
         </div>
         
         <div className="flex justify-between mt-4">
-          {order.status === "in-progress" ? (
+          {status === "in-progress" ? (
             <Button 
               className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
               onClick={() => handleStatusChange("ready")}
