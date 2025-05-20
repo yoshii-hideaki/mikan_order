@@ -72,21 +72,38 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   clearCart: () => set({ cartItems: [] }),
   
   calculateSubtotal: () => {
-    return get().cartItems.reduce(
-      (total, item) => total + (item.menuItem.price * item.quantity),
+    // 各ドリンクの合計数量を計算
+    const totalDrinks = get().cartItems.reduce(
+      (total, item) => total + item.quantity,
       0
     );
+    
+    // 新しい料金体系: 1杯700円、2杯1200円、3杯1500円
+    let price = 0;
+    const fullSets = Math.floor(totalDrinks / 3);
+    const remainder = totalDrinks % 3;
+    
+    // 3杯セットの価格を加算
+    price += fullSets * 150000; // 1500円を100倍した値（セント表記）
+    
+    // 残りの杯数の価格を加算
+    if (remainder === 1) {
+      price += 70000; // 700円を100倍
+    } else if (remainder === 2) {
+      price += 120000; // 1200円を100倍
+    }
+    
+    return price;
   },
   
   calculateTax: () => {
-    const subtotal = get().calculateSubtotal();
-    return Math.round(subtotal * 0.1); // 10% tax
+    // 消費税を無視
+    return 0;
   },
   
   calculateTotal: () => {
-    const subtotal = get().calculateSubtotal();
-    const tax = get().calculateTax();
-    return subtotal + tax;
+    // 消費税を無視するので、小計と合計は同じ
+    return get().calculateSubtotal();
   },
   
   createOrder: async () => {

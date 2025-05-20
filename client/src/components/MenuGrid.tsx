@@ -95,8 +95,7 @@ export default function MenuGrid() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
             {Array.from({ length: 7 }).map((_, index) => (
               <div key={index} className="p-4 border rounded-lg">
-                <Skeleton className="h-6 w-3/4 mb-2" />
-                <Skeleton className="h-4 w-1/2 mb-3" />
+                <Skeleton className="h-6 w-3/4 mb-3" />
                 <div className="flex items-center justify-between mt-4">
                   <Skeleton className="h-8 w-28" />
                   <Skeleton className="h-9 w-16" />
@@ -111,8 +110,7 @@ export default function MenuGrid() {
                 key={item.id}
                 className="p-4 border rounded-lg hover:shadow-md transition-all"
               >
-                <div className="font-medium text-gray-800 mb-2">{item.name}</div>
-                <div className="text-gray-600 text-sm mb-3">{formatPrice(item.price)}</div>
+                <div className="font-medium text-gray-800 mb-3">{item.name}</div>
                 
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center">

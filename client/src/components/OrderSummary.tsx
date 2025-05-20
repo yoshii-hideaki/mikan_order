@@ -102,17 +102,12 @@ export default function OrderSummary() {
         </div>
         
         <div className="border-t pt-4">
-          <div className="flex justify-between mb-2">
-            <span className="text-gray-600">小計</span>
-            <span className="font-medium">{formatCurrency(calculateSubtotal())}</span>
-          </div>
-          <div className="flex justify-between mb-2">
-            <span className="text-gray-600">消費税 (10%)</span>
-            <span className="font-medium">{formatCurrency(calculateTax())}</span>
-          </div>
           <div className="flex justify-between font-bold text-lg">
-            <span>合計</span>
+            <span>合計金額</span>
             <span>{formatCurrency(calculateTotal())}</span>
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            <span>※ 料金体系: 1杯700円、2杯1200円、3杯1500円</span>
           </div>
         </div>
         
