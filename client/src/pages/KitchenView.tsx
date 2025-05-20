@@ -20,19 +20,22 @@ export default function KitchenView() {
       }
       return response.json();
     },
-    refetchInterval: 10000, // Refetch every 10 seconds
+    refetchInterval: 2000, // 2秒ごとに更新
   });
   
   // フィルタリングされた注文
   const filteredOrders = orders
     ? orders.filter(order => filter === "all" || order.status === filter)
-        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        .sort((a, b) => {
+          const timeA = new Date(a.createdAt).getTime();
+          const timeB = new Date(b.createdAt).getTime();
+          return filter === "in-progress" ? timeA - timeB : timeB - timeA;
+        })
     : [];
   
   // ステータスごとのカウント
   const countInProgress = orders ? orders.filter(order => order.status === "in-progress").length : 0;
   const countReady = orders ? orders.filter(order => order.status === "ready").length : 0;
-  const countNew = orders ? orders.filter(order => order.status === "new").length : 0;
 
   return (
     <div className="kitchen-view">
@@ -41,10 +44,6 @@ export default function KitchenView() {
           <div className="flex justify-between items-center flex-wrap gap-4">
             <h2 className="text-xl font-bold">厨房注文画面</h2>
             <div className="flex items-center space-x-4 flex-wrap gap-2">
-              <div className="flex items-center">
-                <div className="w-3 h-3 bg-red-500 rounded-full mr-1"></div>
-                <span className="text-sm">新規: {countNew}</span>
-              </div>
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-yellow-500 rounded-full mr-1"></div>
                 <span className="text-sm">調理中: {countInProgress}</span>
@@ -60,13 +59,6 @@ export default function KitchenView() {
       
       {/* Order filter */}
       <div className="mb-6 flex flex-wrap gap-2">
-        <Button
-          variant={filter === "all" ? "default" : "secondary"}
-          className={filter === "all" ? "" : "bg-gray-800 text-white"}
-          onClick={() => setFilter("all")}
-        >
-          すべて
-        </Button>
         <Button
           variant={filter === "in-progress" ? "default" : "secondary"}
           className={filter === "in-progress" ? "" : "bg-yellow-500 text-white"}

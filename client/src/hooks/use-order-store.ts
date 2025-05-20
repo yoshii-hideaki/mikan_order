@@ -126,8 +126,13 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
     }
     
     try {
+      // 現在の注文数を取得して次の注文番号を決定
+      const ordersResponse = await apiRequest('GET', '/api/orders');
+      const orders = await ordersResponse.json();
+      const nextOrderNumber = orders.length + 1;
+
       const orderData = {
-        orderNumber: `#${Math.floor(1000 + Math.random() * 9000)}`, // Random 4-digit number
+        orderNumber: `#${nextOrderNumber}`,
         totalAmount: calculateTotal(),
         items: cartItems.map((item) => ({
           menuItemId: item.menuItem.id,
@@ -136,8 +141,8 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
         }))
       };
       
-      const response = await apiRequest('POST', '/api/orders', orderData);
-      const newOrder = await response.json();
+      const createResponse = await apiRequest('POST', '/api/orders', orderData);
+      const newOrder = await createResponse.json();
       
       // Clear the cart after successful order creation
       clearCart();
