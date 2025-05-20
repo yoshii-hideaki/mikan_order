@@ -72,25 +72,46 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   clearCart: () => set({ cartItems: [] }),
   
   calculateSubtotal: () => {
-    // 各ドリンクの合計数量を計算
-    const totalDrinks = get().cartItems.reduce(
-      (total, item) => total + item.quantity,
+    const { cartItems } = get();
+    
+    // アルコールとソフトドリンクの数を別々に数える
+    const alcoholDrinks = cartItems.reduce(
+      (total, item) => total + (item.menuItem.category === "お酒" ? item.quantity : 0),
       0
     );
     
-    // 新しい料金体系: 1杯700円、2杯1200円、3杯1500円
+    const softDrinks = cartItems.reduce(
+      (total, item) => total + (item.menuItem.category === "ソフトドリンク" ? item.quantity : 0),
+      0
+    );
+    
+    // アルコールの料金計算: 1杯700円、2杯1200円、3杯1500円
     let price = 0;
-    const fullSets = Math.floor(totalDrinks / 3);
-    const remainder = totalDrinks % 3;
+    const alcoholFullSets = Math.floor(alcoholDrinks / 3);
+    const alcoholRemainder = alcoholDrinks % 3;
     
     // 3杯セットの価格を加算
-    price += fullSets * 150000; // 1500円を100倍した値（セント表記）
+    price += alcoholFullSets * 150000; // 1500円を100倍した値（セント表記）
     
     // 残りの杯数の価格を加算
-    if (remainder === 1) {
+    if (alcoholRemainder === 1) {
       price += 70000; // 700円を100倍
-    } else if (remainder === 2) {
+    } else if (alcoholRemainder === 2) {
       price += 120000; // 1200円を100倍
+    }
+    
+    // ソフトドリンクの料金計算: 同じ料金体系で1杯につき200円引き
+    const softDrinkFullSets = Math.floor(softDrinks / 3);
+    const softDrinkRemainder = softDrinks % 3;
+    
+    // 3杯セットの価格を加算 (1500円 - 600円 = 900円)
+    price += softDrinkFullSets * 90000; // 900円を100倍
+    
+    // 残りの杯数の価格を加算
+    if (softDrinkRemainder === 1) {
+      price += 50000; // 700円 - 200円 = 500円を100倍
+    } else if (softDrinkRemainder === 2) {
+      price += 80000; // 1200円 - 400円 = 800円を100倍
     }
     
     return price;
@@ -120,7 +141,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
         items: cartItems.map((item) => ({
           menuItemId: item.menuItem.id,
           quantity: item.quantity,
-          price: item.menuItem.price
+          price: 0 // 価格は表示しないので0にする
         }))
       };
       

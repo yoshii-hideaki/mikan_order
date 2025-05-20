@@ -80,13 +80,10 @@ export default function OrderSummary() {
                 <div>
                   <div className="font-medium">{item.menuItem.name}</div>
                   <div className="text-gray-500 text-sm">
-                    {formatCurrency(item.menuItem.price)} × {item.quantity}
+                    {item.quantity}杯
                   </div>
                 </div>
                 <div className="flex items-center">
-                  <span className="font-medium">
-                    {formatCurrency(item.menuItem.price * item.quantity)}
-                  </span>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -108,6 +105,9 @@ export default function OrderSummary() {
           </div>
           <div className="text-xs text-gray-500 mt-1">
             <span>※ 料金体系: 1杯700円、2杯1200円、3杯1500円</span>
+          </div>
+          <div className="text-xs text-gray-500">
+            <span>※ ソフトドリンクは1杯につき200円引き</span>
           </div>
         </div>
         
