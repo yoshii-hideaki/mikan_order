@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { OrderWithItems, OrderStatus } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,7 +12,7 @@ export default function KitchenView() {
   const [filter, setFilter] = useState<FilterStatus>("in-progress");
   
   const { data: orders, isLoading } = useQuery<OrderWithItems[]>({
-    queryKey: ["/api/orders", "withItems"],
+    queryKey: ["/api/orders"],
     queryFn: async () => {
       const response = await fetch("/api/orders?withItems=true");
       if (!response.ok) {
@@ -21,55 +21,18 @@ export default function KitchenView() {
       return response.json();
     },
     refetchInterval: 10000, // Refetch every 10 seconds
-    staleTime: 5000,  // Consider data fresh for 5 seconds
-    select: (data) => {
-      // データを事前に処理して、レンダリング時の処理を軽減
-      return data.map(order => ({
-        ...order,
-        createdAt: new Date(order.createdAt), // 日付文字列を日付オブジェクトに変換
-        items: order.items || [] // itemsが存在しない場合は空配列を設定
-      }));
-    }
   });
   
-  // より効率的なフィルタリングとソート - useMemoを使用して再計算を防止
-  const { filteredOrders, counts } = useState(() => {
-    if (!orders) {
-      return { 
-        filteredOrders: [], 
-        counts: { new: 0, "in-progress": 0, ready: 0 } 
-      };
-    }
-    
-    // 1回のループですべての処理を完了
-    const statusCounts = { new: 0, "in-progress": 0, ready: 0 };
-    
-    // フィルタリングしながらカウントを行う
-    const filtered = orders.filter(order => {
-      // ステータスをカウント
-      if (order.status === "in-progress") {
-        statusCounts["in-progress"]++;
-      } else if (order.status === "ready") {
-        statusCounts.ready++;
-      } else if (order.status === "new") {
-        statusCounts.new++;
-      }
-      
-      // フィルタリング条件
-      return filter === "all" || order.status === filter;
-    });
-    
-    // ソート - 日付は既に事前処理済み
-    const sorted = [...filtered].sort((a, b) => {
-      // createdAtはすでにDateオブジェクト
-      return a.createdAt.getTime() - b.createdAt.getTime();
-    });
-    
-    return { 
-      filteredOrders: sorted, 
-      counts: statusCounts 
-    };
-  }, [orders, filter]);
+  // フィルタリングされた注文
+  const filteredOrders = orders
+    ? orders.filter(order => filter === "all" || order.status === filter)
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    : [];
+  
+  // ステータスごとのカウント
+  const countInProgress = orders ? orders.filter(order => order.status === "in-progress").length : 0;
+  const countReady = orders ? orders.filter(order => order.status === "ready").length : 0;
+  const countNew = orders ? orders.filter(order => order.status === "new").length : 0;
 
   return (
     <div className="kitchen-view">
@@ -80,15 +43,15 @@ export default function KitchenView() {
             <div className="flex items-center space-x-4 flex-wrap gap-2">
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-red-500 rounded-full mr-1"></div>
-                <span className="text-sm">新規: {counts.new}</span>
+                <span className="text-sm">新規: {countNew}</span>
               </div>
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-yellow-500 rounded-full mr-1"></div>
-                <span className="text-sm">調理中: {counts["in-progress"]}</span>
+                <span className="text-sm">調理中: {countInProgress}</span>
               </div>
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-green-500 rounded-full mr-1"></div>
-                <span className="text-sm">完了: {counts.ready}</span>
+                <span className="text-sm">完了: {countReady}</span>
               </div>
             </div>
           </div>
@@ -143,7 +106,7 @@ export default function KitchenView() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredOrders?.length ? (
+          {filteredOrders.length > 0 ? (
             filteredOrders.map((order) => (
               <OrderCard key={order.id} order={order} />
             ))
