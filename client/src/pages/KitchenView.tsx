@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { OrderWithItems, OrderStatus } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,7 +12,7 @@ export default function KitchenView() {
   const [filter, setFilter] = useState<FilterStatus>("in-progress");
   
   const { data: orders, isLoading } = useQuery<OrderWithItems[]>({
-    queryKey: ["/api/orders"],
+    queryKey: ["/api/orders", "withItems"],
     queryFn: async () => {
       const response = await fetch("/api/orders?withItems=true");
       if (!response.ok) {
@@ -21,19 +21,55 @@ export default function KitchenView() {
       return response.json();
     },
     refetchInterval: 10000, // Refetch every 10 seconds
+    staleTime: 5000,  // Consider data fresh for 5 seconds
+    select: (data) => {
+      // データを事前に処理して、レンダリング時の処理を軽減
+      return data.map(order => ({
+        ...order,
+        createdAt: new Date(order.createdAt), // 日付文字列を日付オブジェクトに変換
+        items: order.items || [] // itemsが存在しない場合は空配列を設定
+      }));
+    }
   });
   
-  // Filter and sort orders
-  const filteredOrders = orders
-    ?.filter((order) => filter === "all" || order.status === filter)
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  
-  // Count orders by status
-  const counts = {
-    new: orders?.filter(order => order.status === "new").length || 0,
-    "in-progress": orders?.filter(order => order.status === "in-progress").length || 0,
-    ready: orders?.filter(order => order.status === "ready").length || 0,
-  };
+  // より効率的なフィルタリングとソート - useMemoを使用して再計算を防止
+  const { filteredOrders, counts } = useState(() => {
+    if (!orders) {
+      return { 
+        filteredOrders: [], 
+        counts: { new: 0, "in-progress": 0, ready: 0 } 
+      };
+    }
+    
+    // 1回のループですべての処理を完了
+    const statusCounts = { new: 0, "in-progress": 0, ready: 0 };
+    
+    // フィルタリングしながらカウントを行う
+    const filtered = orders.filter(order => {
+      // ステータスをカウント
+      if (order.status === "in-progress") {
+        statusCounts["in-progress"]++;
+      } else if (order.status === "ready") {
+        statusCounts.ready++;
+      } else if (order.status === "new") {
+        statusCounts.new++;
+      }
+      
+      // フィルタリング条件
+      return filter === "all" || order.status === filter;
+    });
+    
+    // ソート - 日付は既に事前処理済み
+    const sorted = [...filtered].sort((a, b) => {
+      // createdAtはすでにDateオブジェクト
+      return a.createdAt.getTime() - b.createdAt.getTime();
+    });
+    
+    return { 
+      filteredOrders: sorted, 
+      counts: statusCounts 
+    };
+  }, [orders, filter]);
 
   return (
     <div className="kitchen-view">
