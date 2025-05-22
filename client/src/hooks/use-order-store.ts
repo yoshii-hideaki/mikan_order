@@ -24,6 +24,9 @@ interface OrderStore {
   
   // Order status management for kitchen view
   updateOrderStatus: (orderId: number, status: OrderStatus) => Promise<void>;
+
+  // Order update
+  updateOrder: (orderId: number, orderNumber: string, status: OrderStatus, items: Array<{ menuItemId: number; quantity: number }>) => Promise<OrderWithItems | null>;
 }
 
 export const useOrderStore = create<OrderStore>((set, get) => ({
@@ -166,6 +169,54 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
     } catch (error) {
       console.error('Failed to update order status:', error);
       throw error;
+    }
+  },
+
+  updateOrder: async (orderId: number, orderNumber: string, status: OrderStatus, items: Array<{ menuItemId: number; quantity: number }>) => {
+    try {
+      // 注文内容をPATCHで更新
+      const orderData = {
+        orderNumber,
+        status,
+        items: items.map(item => ({
+          menuItemId: item.menuItemId,
+          quantity: item.quantity
+        }))
+      };
+      
+      const response = await apiRequest('PATCH', `/api/orders/${orderId}`, orderData);
+      const updatedOrder = await response.json();
+      
+      // キャッシュを明示的に更新
+      queryClient.setQueryData<OrderWithItems[]>(['/api/orders'], (oldData) => {
+        if (!oldData) return [updatedOrder];
+        
+        // 既存のキャッシュデータを更新
+        return oldData.map(order => 
+          order.id === orderId ? updatedOrder : order
+        );
+      });
+      
+      // withItems=trueのクエリも更新
+      queryClient.setQueryData<OrderWithItems[]>(['/api/orders?withItems=true'], (oldData) => {
+        if (!oldData) return [updatedOrder];
+        
+        // 既存のキャッシュデータを更新
+        return oldData.map(order => 
+          order.id === orderId ? updatedOrder : order
+        );
+      });
+
+      // 関連するクエリを強制的に再取得
+      await queryClient.invalidateQueries({ 
+        queryKey: ['/api/orders'],
+        refetchType: 'all'
+      });
+      
+      return updatedOrder;
+    } catch (error) {
+      console.error('Failed to update order:', error);
+      throw error; // エラーを上位に伝播させる
     }
   }
 }));

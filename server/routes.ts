@@ -147,6 +147,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/orders/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+      
+      // バリデーションスキーマを設定
+      const updateOrderSchema = z.object({
+        orderNumber: z.string(),
+        status: OrderStatus,
+        items: z.array(
+          z.object({
+            menuItemId: z.number(),
+            quantity: z.number().positive()
+          })
+        )
+      });
+      
+      const orderData = updateOrderSchema.parse(req.body);
+      
+      // 注文と注文商品を更新
+      const updatedOrder = await storage.updateOrderWithItems(
+        id, 
+        { 
+          orderNumber: orderData.orderNumber, 
+          status: orderData.status 
+        },
+        orderData.items
+      );
+      
+      if (!updatedOrder) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      res.json(updatedOrder);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid order data", errors: error.errors });
+      }
+      console.error("Failed to update order:", error);
+      res.status(500).json({ message: "Failed to update order" });
+    }
+  });
+
+  app.delete("/api/orders/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID" });
+      }
+      
+      // まず注文アイテムを削除
+      await storage.deleteOrderItemsByOrderId(id);
+      
+      // 次に注文自体を削除
+      const deleted = await storage.deleteOrder(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Failed to delete order:", error);
+      res.status(500).json({ message: "Failed to delete order" });
+    }
+  });
+
   // Create HTTP server
   const httpServer = createServer(app);
 

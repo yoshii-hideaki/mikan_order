@@ -16,7 +16,7 @@ import { toast } from "sonner";
 
 export default function OrderHistory() {
   const queryClient = useQueryClient();
-  const { createOrder } = useOrderStore();
+  const { createOrder, updateOrder } = useOrderStore();
   const [editingOrder, setEditingOrder] = useState<OrderWithItems | null>(null);
   const [editedItems, setEditedItems] = useState<Array<{ id?: number; menuItemId: number; quantity: number }>>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -114,52 +114,23 @@ export default function OrderHistory() {
         return;
       }
 
-      // 1. 元の注文を削除
-      const deleteResponse = await fetch(`/api/orders/${editingOrder.id}`, {
-        method: 'DELETE',
-      });
-
-      if (!deleteResponse.ok) {
-        throw new Error('Failed to delete original order');
-      }
-
-      // 2. 新しい注文を作成
-      const orderData = {
-        orderNumber: editingOrder.orderNumber,
-        status: editingOrder.status,
-        items: editedItems.map(item => ({
+      // 注文内容を更新
+      await updateOrder(
+        editingOrder.id,
+        editingOrder.orderNumber,
+        editingOrder.status,
+        editedItems.map(item => ({
           menuItemId: item.menuItemId,
-          quantity: item.quantity,
-          price: 0 // 価格は表示しないので0にする
+          quantity: item.quantity
         }))
-      };
+      );
 
-      const createResponse = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData),
+      // データを再取得
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/orders"],
+        refetchType: 'all'
       });
 
-      if (!createResponse.ok) {
-        const errorData = await createResponse.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to create new order');
-      }
-
-      const newOrder = await createResponse.json();
-
-      // キャッシュを更新
-      queryClient.setQueryData<OrderWithItems[]>(["/api/orders"], (oldData) => {
-        if (!oldData) return [newOrder];
-        return oldData.map(order => 
-          order.id === editingOrder.id ? newOrder : order
-        );
-      });
-
-      // 関連するクエリを無効化して再取得をトリガー
-      await queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      
       toast.success("注文内容を更新しました");
       setEditingOrder(null);
       setEditedItems([]);
