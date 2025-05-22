@@ -261,12 +261,53 @@ export class MemStorage implements IStorage {
     const existingOrder = await this.getOrderById(id);
     if (!existingOrder) return undefined;
 
-    // Calculate the total amount based on items
-    // Reusing the calculation logic from the front-end would be ideal here
-    // For simplicity, we'll just keep the existing total amount
-    const totalAmount = existingOrder.totalAmount;
+    // 注文アイテムに基づいて合計金額を計算する
+    // メニューアイテムの情報を取得
+    const itemsWithMenuInfo = await Promise.all(
+      items.map(async (item) => {
+        const menuItem = await this.getMenuItemById(item.menuItemId);
+        return {
+          ...item,
+          menuItem
+        };
+      })
+    );
 
-    // Update the order
+    // 価格計算ロジック（フロントエンドと同じロジック）
+    // すべてのドリンクの数を数える
+    const totalDrinks = itemsWithMenuInfo.reduce(
+      (total, item) => total + item.quantity,
+      0
+    );
+    
+    // ソフトドリンクの数を数える（値引き用）
+    const softDrinks = itemsWithMenuInfo.reduce(
+      (total, item) => total + (item.menuItem?.category === "ソフトドリンク" ? item.quantity : 0),
+      0
+    );
+    
+    // 通常の料金計算: 1杯700円、2杯1200円、3杯1500円
+    let price = 0;
+    const fullSets = Math.floor(totalDrinks / 3);
+    const remainder = totalDrinks % 3;
+    
+    // 3杯セットの価格を加算
+    price += fullSets * 150000; // 1500円を100倍した値（セント表記）
+    
+    // 残りの杯数の価格を加算
+    if (remainder === 1) {
+      price += 70000; // 700円を100倍
+    } else if (remainder === 2) {
+      price += 120000; // 1200円を100倍
+    }
+    
+    // ソフトドリンクの値引き：1杯につき200円引き
+    const discount = softDrinks * 20000; // 200円 × ソフトドリンクの杯数
+    
+    // 値引き後の価格を計算
+    const totalAmount = Math.max(0, price - discount);
+
+    // Update the order with new total amount
     const updatedOrder = {
       ...existingOrder,
       ...orderData,
