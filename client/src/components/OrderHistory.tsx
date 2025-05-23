@@ -1,8 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { OrderWithItems, OrderStatus, MenuItem } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Edit2, Plus, Trash2 } from "lucide-react";
+import { FileText, Edit2, Plus, Trash2, Download } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
@@ -13,6 +12,35 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { apiRequest } from "@/lib/queryClient";
+
+// Define types for order items
+interface MenuItem {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  imageUrl?: string;
+}
+
+interface OrderItemWithMenuItem {
+  id: number;
+  menuItem: MenuItem;
+  quantity: number;
+}
+
+type OrderStatus = "in-progress" | "ready";
+
+interface OrderWithItems {
+  id: number;
+  orderNumber: string;
+  status: OrderStatus;
+  totalAmount: number;
+  createdAt: string;
+  updatedAt: string;
+  items: OrderItemWithMenuItem[];
+}
 
 export default function OrderHistory() {
   const queryClient = useQueryClient();
@@ -20,6 +48,7 @@ export default function OrderHistory() {
   const [editingOrder, setEditingOrder] = useState<OrderWithItems | null>(null);
   const [editedItems, setEditedItems] = useState<Array<{ id?: number; menuItemId: number; quantity: number }>>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   
   const { data: orders, isLoading } = useQuery<OrderWithItems[]>({
     queryKey: ["/api/orders"],
@@ -64,7 +93,7 @@ export default function OrderHistory() {
 
   const handleEditClick = (order: OrderWithItems) => {
     setEditingOrder(order);
-    setEditedItems(order.items.map(item => ({
+    setEditedItems(order.items.map((item: OrderItemWithMenuItem) => ({
       id: item.id,
       menuItemId: item.menuItem.id,
       quantity: item.quantity
@@ -142,11 +171,95 @@ export default function OrderHistory() {
     }
   };
 
+  // Download order history as CSV
+  const downloadOrderHistory = async () => {
+    if (isDownloading) return;
+    
+    try {
+      setIsDownloading(true);
+      
+      // サーバーから最新の注文データを取得
+      const response = await apiRequest('GET', '/api/orders?withItems=true');
+      const allOrders: OrderWithItems[] = await response.json();
+      
+      if (!allOrders?.length) {
+        toast.error("ダウンロードする注文履歴がありません");
+        return;
+      }
+
+      // CSVヘッダーを作成
+      const headers = ["注文番号", "日時", "金額", "ステータス", "注文内容"];
+      
+      // 各注文をCSV行にフォーマット
+      const csvRows = allOrders.map(order => {
+        const orderDate = format(parseISO(order.createdAt.toString()), "yyyy/MM/dd HH:mm:ss");
+        const status = order.status === "in-progress" ? "準備中" : "準備完了";
+        const amount = formatPrice(order.totalAmount);
+        
+        // 注文アイテムを処理
+        const items = order.items.map((item) => 
+          `${item.menuItem.name} × ${item.quantity}`
+        ).join(", ");
+        
+        // CSVエスケープ処理
+        const escapeCsvValue = (value: string) => {
+          if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return value;
+        };
+        
+        return [
+          escapeCsvValue(order.orderNumber),
+          escapeCsvValue(orderDate),
+          escapeCsvValue(amount),
+          escapeCsvValue(status),
+          escapeCsvValue(items)
+        ].join(",");
+      });
+      
+      // ヘッダーと行を結合
+      const csvContent = [headers.join(","), ...csvRows].join("\n");
+      
+      // CSVコンテンツでBlobを作成
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      
+      // ダウンロードリンクを作成してダウンロードをトリガー
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `order_history_${format(new Date(), "yyyyMMdd")}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success("注文履歴をダウンロードしました");
+    } catch (error) {
+      console.error("Failed to download order history:", error);
+      toast.error("注文履歴のダウンロードに失敗しました");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <>
       <Card className="mt-6">
         <CardContent className="p-4">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">最近の注文履歴</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-800">最近の注文履歴</h2>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex items-center gap-1"
+              onClick={downloadOrderHistory}
+              disabled={isDownloading}
+            >
+              <Download className="h-4 w-4" />
+              {isDownloading ? "ダウンロード中..." : "全履歴をダウンロード"}
+            </Button>
+          </div>
           
           <div className="overflow-x-auto">
             {isLoading ? (
@@ -197,7 +310,7 @@ export default function OrderHistory() {
                           {formatPrice(order.totalAmount)}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <StatusBadge status={order.status as "in-progress" | "ready"} />
+                          <StatusBadge status={order.status} />
                         </td>
                         <td className="px-4 py-3">
                           <div className="space-y-1">
