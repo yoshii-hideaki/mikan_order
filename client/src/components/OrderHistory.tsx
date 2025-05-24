@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { useOrderStore } from "@/hooks/use-order-store";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -49,6 +49,8 @@ export default function OrderHistory() {
   const [editedItems, setEditedItems] = useState<Array<{ id?: number; menuItemId: number; quantity: number }>>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<OrderWithItems | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const { data: orders, isLoading } = useQuery<OrderWithItems[]>({
     queryKey: ["/api/orders"],
@@ -168,6 +170,36 @@ export default function OrderHistory() {
       toast.error(error instanceof Error ? error.message : "注文内容の更新に失敗しました");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Delete order
+  const handleDeleteClick = (order: OrderWithItems) => {
+    setOrderToDelete(order);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!orderToDelete || isDeleting) return;
+
+    try {
+      setIsDeleting(true);
+      
+      // Delete the order
+      await apiRequest('DELETE', `/api/orders/${orderToDelete.id}`);
+      
+      // Invalidate queries to refresh the data
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/orders"],
+        refetchType: 'all'
+      });
+      
+      toast.success("注文を削除しました");
+      setOrderToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete order:', error);
+      toast.error(error instanceof Error ? error.message : "注文の削除に失敗しました");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -322,19 +354,32 @@ export default function OrderHistory() {
                           </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          {order.status === "in-progress" ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-1"
-                              onClick={() => handleEditClick(order)}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                              編集
-                            </Button>
-                          ) : (
-                            <span className="text-gray-400">編集不可</span>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {order.status === "in-progress" ? (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex items-center gap-1"
+                                  onClick={() => handleEditClick(order)}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                  編集
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-500 hover:text-red-600 flex items-center gap-1"
+                                  onClick={() => handleDeleteClick(order)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  削除
+                                </Button>
+                              </>
+                            ) : (
+                              <span className="text-gray-400">編集不可</span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -447,6 +492,38 @@ export default function OrderHistory() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!orderToDelete} onOpenChange={() => {
+        if (!isDeleting) {
+          setOrderToDelete(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>注文の削除</DialogTitle>
+            <DialogDescription>
+              この注文を削除してもよろしいですか？この操作は元に戻せません。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-end gap-2 mt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setOrderToDelete(null)}
+              disabled={isDeleting}
+            >
+              キャンセル
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "削除中..." : "削除する"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

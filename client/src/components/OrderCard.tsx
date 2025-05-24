@@ -71,14 +71,14 @@ export default function OrderCard({ order }: OrderCardProps) {
       </div>
       
       <div className="p-4">
-        <div className="space-y-2 mb-4">
+        <div className="space-y-3 mb-4">
           {order.items?.map((item) => (
             <div 
               key={item.id}
-              className={`flex justify-between py-1 border-b ${statusColors.divider}`}
+              className={`flex justify-between py-2 border-b ${statusColors.divider}`}
             >
-              <span className="font-medium">{item.menuItem.name}</span>
-              <span>× {item.quantity}</span>
+              <span className="font-medium text-lg">{item.menuItem.name}</span>
+              <span className="text-lg">× {item.quantity}</span>
             </div>
           ))}
         </div>
