@@ -1,4 +1,4 @@
-.PHONY: dev stop restart open install build
+.PHONY: dev stop restart open install build db-push
 
 PID_FILE := /tmp/mikan-order.pid
 LOG_FILE := /tmp/mikan-order.log
@@ -34,3 +34,6 @@ install:
 
 build:
 	npm run build
+
+db-push:
+	npm run db:push
