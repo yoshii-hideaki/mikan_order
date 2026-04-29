@@ -85,9 +85,13 @@ export class DbStorage implements IStorage {
   private db: ReturnType<typeof drizzle>;
 
   constructor() {
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const url = process.env.DATABASE_URL!;
+    const pool = new Pool({
+      connectionString: url,
+      ssl: { rejectUnauthorized: false },
+    });
     this.db = drizzle(pool);
-    this.seedMenuItems();
+    this.seedMenuItems().catch((err) => console.error("[db] seed failed:", err));
   }
 
   private async seedMenuItems() {
