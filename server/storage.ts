@@ -1,20 +1,13 @@
-import {
-  type MenuItem,
-  type InsertMenuItem,
-  type Order,
-  type InsertOrder,
-  type OrderItem,
-  type InsertOrderItem,
+import { 
+  type MenuItem, 
+  type InsertMenuItem, 
+  type Order, 
+  type InsertOrder, 
+  type OrderItem, 
+  type InsertOrderItem, 
   type OrderWithItems,
-  OrderStatus,
-  orders,
-  orderItems,
+  OrderStatus
 } from "@shared/schema";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { eq } from "drizzle-orm";
-import pg from "pg";
-
-const { Pool } = pg;
 
 export interface IStorage {
   // Menu Items
@@ -23,7 +16,7 @@ export interface IStorage {
   createMenuItem(item: InsertMenuItem): Promise<MenuItem>;
   updateMenuItem(id: number, item: Partial<InsertMenuItem>): Promise<MenuItem | undefined>;
   deleteMenuItem(id: number): Promise<boolean>;
-
+  
   // Orders
   getAllOrders(): Promise<Order[]>;
   getOrderById(id: number): Promise<Order | undefined>;
@@ -31,187 +24,21 @@ export interface IStorage {
   createOrder(order: InsertOrder): Promise<Order>;
   updateOrderStatus(id: number, status: OrderStatus): Promise<Order | undefined>;
   deleteOrder(id: number): Promise<boolean>;
-
+  
   // Order Items
   getOrderItemsByOrderId(orderId: number): Promise<OrderItem[]>;
   createOrderItem(item: InsertOrderItem): Promise<OrderItem>;
   deleteOrderItemsByOrderId(orderId: number): Promise<boolean>;
-
+  
   // Combined Operations
   getOrderWithItems(orderId: number): Promise<OrderWithItems | undefined>;
   getAllOrdersWithItems(): Promise<OrderWithItems[]>;
   updateOrderWithItems(
-    id: number,
-    orderData: { orderNumber: string; status: OrderStatus },
-    items: Array<{ menuItemId: number; quantity: number }>
+    id: number, 
+    orderData: { orderNumber: string; status: OrderStatus; }, 
+    items: Array<{ menuItemId: number; quantity: number; }>
   ): Promise<OrderWithItems | undefined>;
 }
-
-// ---------------------------------------------------------------------------
-// Menu items are always hardcoded (not stored in DB)
-// ---------------------------------------------------------------------------
-
-const FIXED_MENU_ITEMS: MenuItem[] = [
-  { id: 1, name: "日本酒みかんロック",     price: 75000, imageUrl: "", category: "お酒" },
-  { id: 2, name: "太幸ワイン",             price: 80000, imageUrl: "", category: "お酒" },
-  { id: 3, name: "太幸ワインサングリア",   price: 85000, imageUrl: "", category: "お酒" },
-  { id: 4, name: "ブラッドオレンジ梅酒",   price: 78000, imageUrl: "", category: "お酒" },
-  { id: 5, name: "カシス河内晩柑",         price: 78000, imageUrl: "", category: "お酒" },
-  { id: 6, name: "レモン酎ハイ",           price: 70000, imageUrl: "", category: "お酒" },
-  { id: 7, name: "河内晩柑ジュース",       price: 55000, imageUrl: "", category: "ソフトドリンク" },
-];
-
-const MENU_MAP = new Map<number, MenuItem>(FIXED_MENU_ITEMS.map((m) => [m.id, m]));
-
-function calcTotalAmount(
-  items: Array<{ menuItemId: number; quantity: number }>
-): number {
-  const totalDrinks = items.reduce((sum, i) => sum + i.quantity, 0);
-  const softDrinks = items.reduce(
-    (sum, i) => sum + (MENU_MAP.get(i.menuItemId)?.category === "ソフトドリンク" ? i.quantity : 0),
-    0
-  );
-
-  const fullSets = Math.floor(totalDrinks / 3);
-  const remainder = totalDrinks % 3;
-  let price = fullSets * 150000;
-  if (remainder === 1) price += 70000;
-  else if (remainder === 2) price += 120000;
-
-  return Math.max(0, price - softDrinks * 20000);
-}
-
-// ---------------------------------------------------------------------------
-// PostgreSQL storage — orders & order_items only (used when DATABASE_URL is set)
-// ---------------------------------------------------------------------------
-
-export class DbStorage implements IStorage {
-  private db: ReturnType<typeof drizzle>;
-
-  constructor() {
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL!,
-      ssl: { rejectUnauthorized: false },
-    });
-    this.db = drizzle(pool);
-  }
-
-  // Menu items — always from fixed list, never touches DB
-  async getAllMenuItems() { return FIXED_MENU_ITEMS; }
-  async getMenuItemById(id: number) { return MENU_MAP.get(id); }
-  async createMenuItem(item: InsertMenuItem) {
-    const id = Math.max(...FIXED_MENU_ITEMS.map((m) => m.id)) + 1;
-    const newItem = { ...item, id };
-    FIXED_MENU_ITEMS.push(newItem);
-    MENU_MAP.set(id, newItem);
-    return newItem;
-  }
-  async updateMenuItem(id: number, item: Partial<InsertMenuItem>) {
-    const existing = MENU_MAP.get(id);
-    if (!existing) return undefined;
-    const updated = { ...existing, ...item };
-    MENU_MAP.set(id, updated);
-    return updated;
-  }
-  async deleteMenuItem(id: number) {
-    return MENU_MAP.delete(id);
-  }
-
-  // Orders — DB
-  async getAllOrders() {
-    return this.db.select().from(orders);
-  }
-
-  async getOrderById(id: number) {
-    const rows = await this.db.select().from(orders).where(eq(orders.id, id));
-    return rows[0];
-  }
-
-  async getOrderByNumber(orderNumber: string) {
-    const rows = await this.db.select().from(orders).where(eq(orders.orderNumber, orderNumber));
-    return rows[0];
-  }
-
-  async createOrder(order: InsertOrder) {
-    const rows = await this.db
-      .insert(orders)
-      .values({ ...order, status: "in-progress" })
-      .returning();
-    return rows[0];
-  }
-
-  async updateOrderStatus(id: number, status: OrderStatus) {
-    const rows = await this.db
-      .update(orders)
-      .set({ status, updatedAt: new Date() })
-      .where(eq(orders.id, id))
-      .returning();
-    return rows[0];
-  }
-
-  async deleteOrder(id: number) {
-    const rows = await this.db.delete(orders).where(eq(orders.id, id)).returning();
-    return rows.length > 0;
-  }
-
-  // Order items — DB
-  async getOrderItemsByOrderId(orderId: number) {
-    return this.db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
-  }
-
-  async createOrderItem(item: InsertOrderItem) {
-    const rows = await this.db.insert(orderItems).values(item).returning();
-    return rows[0];
-  }
-
-  async deleteOrderItemsByOrderId(orderId: number) {
-    await this.db.delete(orderItems).where(eq(orderItems.orderId, orderId));
-    return true;
-  }
-
-  // Combined — orders from DB, menu items from fixed list
-  async getOrderWithItems(orderId: number): Promise<OrderWithItems | undefined> {
-    const order = await this.getOrderById(orderId);
-    if (!order) return undefined;
-
-    const items = await this.getOrderItemsByOrderId(orderId);
-    return {
-      ...order,
-      items: items.map((item) => ({ ...item, menuItem: MENU_MAP.get(item.menuItemId)! })),
-    };
-  }
-
-  async getAllOrdersWithItems() {
-    const allOrders = await this.getAllOrders();
-    return Promise.all(allOrders.map((o) => this.getOrderWithItems(o.id).then((r) => r!)));
-  }
-
-  async updateOrderWithItems(
-    id: number,
-    orderData: { orderNumber: string; status: OrderStatus },
-    items: Array<{ menuItemId: number; quantity: number }>
-  ): Promise<OrderWithItems | undefined> {
-    const existing = await this.getOrderById(id);
-    if (!existing) return undefined;
-
-    const totalAmount = calcTotalAmount(items);
-    await this.db
-      .update(orders)
-      .set({ ...orderData, totalAmount, updatedAt: new Date() })
-      .where(eq(orders.id, id));
-
-    await this.deleteOrderItemsByOrderId(id);
-    for (const item of items) {
-      await this.createOrderItem({ orderId: id, menuItemId: item.menuItemId, quantity: item.quantity, price: 0 });
-    }
-
-    return this.getOrderWithItems(id);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// In-memory storage (fallback when DATABASE_URL is not set)
-// ---------------------------------------------------------------------------
 
 export class MemStorage implements IStorage {
   private menuItems: Map<number, MenuItem>;
@@ -223,15 +50,68 @@ export class MemStorage implements IStorage {
   private orderNumberCounter: number;
 
   constructor() {
-    this.menuItems = new Map(FIXED_MENU_ITEMS.map((m) => [m.id, m]));
+    this.menuItems = new Map();
     this.orders = new Map();
     this.orderItems = new Map();
-    this.menuItemIdCounter = FIXED_MENU_ITEMS.length + 1;
+    this.menuItemIdCounter = 1;
     this.orderIdCounter = 1;
     this.orderItemIdCounter = 1;
-    this.orderNumberCounter = 1000;
+    this.orderNumberCounter = 1000; // Start order numbers at 1000
+    
+    // Initialize with some default menu items
+    this.initializeMenuItems();
   }
 
+  private initializeMenuItems() {
+    const defaultItems: InsertMenuItem[] = [
+      {
+        name: "日本酒みかんロック",
+        price: 75000, // ¥750
+        imageUrl: "",
+        category: "お酒",
+      },
+      {
+        name: "太幸ワイン",
+        price: 80000, // ¥800
+        imageUrl: "",
+        category: "お酒",
+      },
+      {
+        name: "太幸ワインサングリア",
+        price: 85000, // ¥850
+        imageUrl: "",
+        category: "お酒",
+      },
+      {
+        name: "ブラッドオレンジ梅酒",
+        price: 78000, // ¥780
+        imageUrl: "",
+        category: "お酒",
+      },
+      {
+        name: "カシス河内晩柑",
+        price: 78000, // ¥780
+        imageUrl: "",
+        category: "お酒",
+      },
+      {
+        name: "レモン酎ハイ",
+        price: 70000, // ¥700
+        imageUrl: "",
+        category: "お酒",
+      },
+      {
+        name: "河内晩柑ジュース",
+        price: 55000, // ¥550
+        imageUrl: "",
+        category: "ソフトドリンク",
+      },
+    ];
+
+    defaultItems.forEach(item => this.createMenuItem(item));
+  }
+
+  // Menu Items Methods
   async getAllMenuItems(): Promise<MenuItem[]> {
     return Array.from(this.menuItems.values());
   }
@@ -248,17 +128,19 @@ export class MemStorage implements IStorage {
   }
 
   async updateMenuItem(id: number, item: Partial<InsertMenuItem>): Promise<MenuItem | undefined> {
-    const existing = this.menuItems.get(id);
-    if (!existing) return undefined;
-    const updated = { ...existing, ...item };
-    this.menuItems.set(id, updated);
-    return updated;
+    const existingItem = this.menuItems.get(id);
+    if (!existingItem) return undefined;
+
+    const updatedItem = { ...existingItem, ...item };
+    this.menuItems.set(id, updatedItem);
+    return updatedItem;
   }
 
   async deleteMenuItem(id: number): Promise<boolean> {
     return this.menuItems.delete(id);
   }
 
+  // Orders Methods
   async getAllOrders(): Promise<Order[]> {
     return Array.from(this.orders.values());
   }
@@ -268,14 +150,25 @@ export class MemStorage implements IStorage {
   }
 
   async getOrderByNumber(orderNumber: string): Promise<Order | undefined> {
-    return Array.from(this.orders.values()).find((o) => o.orderNumber === orderNumber);
+    return Array.from(this.orders.values()).find(
+      (order) => order.orderNumber === orderNumber
+    );
   }
 
   async createOrder(orderData: InsertOrder): Promise<Order> {
     const id = this.orderIdCounter++;
     const orderNumber = orderData.orderNumber || `#${this.orderNumberCounter++}`;
+    
     const now = new Date();
-    const order: Order = { ...orderData, id, orderNumber, status: "in-progress", createdAt: now, updatedAt: now };
+    const order: Order = {
+      ...orderData,
+      id,
+      orderNumber,
+      status: "in-progress", 
+      createdAt: now,
+      updatedAt: now
+    };
+    
     this.orders.set(id, order);
     return order;
   }
@@ -283,17 +176,26 @@ export class MemStorage implements IStorage {
   async updateOrderStatus(id: number, status: OrderStatus): Promise<Order | undefined> {
     const order = this.orders.get(id);
     if (!order) return undefined;
-    const updated = { ...order, status, updatedAt: new Date() };
-    this.orders.set(id, updated);
-    return updated;
+
+    const updatedOrder = { 
+      ...order, 
+      status,
+      updatedAt: new Date()
+    };
+    
+    this.orders.set(id, updatedOrder);
+    return updatedOrder;
   }
 
   async deleteOrder(id: number): Promise<boolean> {
     return this.orders.delete(id);
   }
 
+  // Order Items Methods
   async getOrderItemsByOrderId(orderId: number): Promise<OrderItem[]> {
-    return Array.from(this.orderItems.values()).filter((i) => i.orderId === orderId);
+    return Array.from(this.orderItems.values()).filter(
+      (item) => item.orderId === orderId
+    );
   }
 
   async createOrderItem(item: InsertOrderItem): Promise<OrderItem> {
@@ -304,49 +206,132 @@ export class MemStorage implements IStorage {
   }
 
   async deleteOrderItemsByOrderId(orderId: number): Promise<boolean> {
-    const keep = Array.from(this.orderItems.entries()).filter(([, i]) => i.orderId !== orderId);
+    // Filter out all items that belong to the specified order
+    const itemsToKeep = Array.from(this.orderItems.entries()).filter(
+      ([_, item]) => item.orderId !== orderId
+    );
+    
+    // Clear all items and re-add only the ones we want to keep
     this.orderItems.clear();
-    keep.forEach(([id, item]) => this.orderItems.set(id, item));
+    itemsToKeep.forEach(([id, item]) => {
+      this.orderItems.set(id, item);
+    });
+    
     return true;
   }
 
+  // Combined Operations
   async getOrderWithItems(orderId: number): Promise<OrderWithItems | undefined> {
     const order = await this.getOrderById(orderId);
     if (!order) return undefined;
 
-    const items = await this.getOrderItemsByOrderId(orderId);
+    const orderItems = await this.getOrderItemsByOrderId(orderId);
+    const itemsWithDetails = await Promise.all(
+      orderItems.map(async (item) => {
+        const menuItem = await this.getMenuItemById(item.menuItemId);
+        return {
+          ...item,
+          menuItem: menuItem!
+        };
+      })
+    );
+
     return {
       ...order,
-      items: items.map((item) => ({ ...item, menuItem: this.menuItems.get(item.menuItemId)! })),
+      items: itemsWithDetails
     };
   }
 
   async getAllOrdersWithItems(): Promise<OrderWithItems[]> {
-    const allOrders = await this.getAllOrders();
-    return Promise.all(allOrders.map((o) => this.getOrderWithItems(o.id).then((r) => r!)));
+    const orders = await this.getAllOrders();
+    return Promise.all(
+      orders.map(async (order) => {
+        const orderWithItems = await this.getOrderWithItems(order.id);
+        return orderWithItems!;
+      })
+    );
   }
 
   async updateOrderWithItems(
     id: number,
-    orderData: { orderNumber: string; status: OrderStatus },
-    items: Array<{ menuItemId: number; quantity: number }>
+    orderData: { orderNumber: string; status: OrderStatus; },
+    items: Array<{ menuItemId: number; quantity: number; }>
   ): Promise<OrderWithItems | undefined> {
-    const existing = await this.getOrderById(id);
-    if (!existing) return undefined;
+    // Check if order exists
+    const existingOrder = await this.getOrderById(id);
+    if (!existingOrder) return undefined;
 
-    const totalAmount = calcTotalAmount(items);
-    const updated = { ...existing, ...orderData, totalAmount, updatedAt: new Date() };
-    this.orders.set(id, updated);
+    // 注文アイテムに基づいて合計金額を計算する
+    // メニューアイテムの情報を取得
+    const itemsWithMenuInfo = await Promise.all(
+      items.map(async (item) => {
+        const menuItem = await this.getMenuItemById(item.menuItemId);
+        return {
+          ...item,
+          menuItem
+        };
+      })
+    );
 
+    // 価格計算ロジック（フロントエンドと同じロジック）
+    // すべてのドリンクの数を数える
+    const totalDrinks = itemsWithMenuInfo.reduce(
+      (total, item) => total + item.quantity,
+      0
+    );
+    
+    // ソフトドリンクの数を数える（値引き用）
+    const softDrinks = itemsWithMenuInfo.reduce(
+      (total, item) => total + (item.menuItem?.category === "ソフトドリンク" ? item.quantity : 0),
+      0
+    );
+    
+    // 通常の料金計算: 1杯700円、2杯1200円、3杯1500円
+    let price = 0;
+    const fullSets = Math.floor(totalDrinks / 3);
+    const remainder = totalDrinks % 3;
+    
+    // 3杯セットの価格を加算
+    price += fullSets * 150000; // 1500円を100倍した値（セント表記）
+    
+    // 残りの杯数の価格を加算
+    if (remainder === 1) {
+      price += 70000; // 700円を100倍
+    } else if (remainder === 2) {
+      price += 120000; // 1200円を100倍
+    }
+    
+    // ソフトドリンクの値引き：1杯につき200円引き
+    const discount = softDrinks * 20000; // 200円 × ソフトドリンクの杯数
+    
+    // 値引き後の価格を計算
+    const totalAmount = Math.max(0, price - discount);
+
+    // Update the order with new total amount
+    const updatedOrder = {
+      ...existingOrder,
+      ...orderData,
+      totalAmount,
+      updatedAt: new Date()
+    };
+    this.orders.set(id, updatedOrder);
+
+    // Delete existing order items
     await this.deleteOrderItemsByOrderId(id);
+
+    // Create new order items
     for (const item of items) {
-      await this.createOrderItem({ orderId: id, menuItemId: item.menuItemId, quantity: item.quantity, price: 0 });
+      await this.createOrderItem({
+        orderId: id,
+        menuItemId: item.menuItemId,
+        quantity: item.quantity,
+        price: 0 // Price is not displayed, so we set it to 0
+      });
     }
 
+    // Return the updated order with items
     return this.getOrderWithItems(id);
   }
 }
 
-export const storage: IStorage = process.env.DATABASE_URL
-  ? new DbStorage()
-  : new MemStorage();
+export const storage = new MemStorage();

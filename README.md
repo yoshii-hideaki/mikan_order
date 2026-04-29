@@ -123,7 +123,6 @@ make open
 | `make log` | サーバーログをリアルタイム表示 |
 | `make install` | 依存関係をインストール |
 | `make build` | 本番用ビルド（`dist/` に出力） |
-| `make db-push` | DBスキーマを反映（要 `DATABASE_URL`） |
 
 ### その他のnpmスクリプト
 
@@ -144,33 +143,11 @@ make open
 | PATCH | `/api/orders/:id/status` | ステータス更新 |
 | DELETE | `/api/orders/:id` | 注文削除 |
 
-### データの永続化
+### データの永続化について
 
-`DATABASE_URL` 環境変数の有無でストレージが自動切換えされます。
+現在はインメモリストレージを使用しており、**サーバー再起動時にデータはリセット**されます。PostgreSQLへ移行する場合は `server/storage.ts` に DB実装を追加し、`drizzle.config.ts` と `DATABASE_URL` 環境変数を設定してください。
 
-| 状態 | 動作 |
-|------|------|
-| `DATABASE_URL` 未設定 | インメモリストレージ（再起動でリセット） |
-| `DATABASE_URL` 設定済み | PostgreSQL に永続保存 |
-
-**PostgreSQLを使う手順：**
-
-1. `.env` に接続URLを追記する
-
-   ```
-   DATABASE_URL=postgresql://user:password@host:5432/dbname
-   ```
-
-2. テーブルを作成する
-
-   ```bash
-   make db-push
-   ```
-
-3. サーバーを起動する
-
-   ```bash
-   make restart
-   ```
-
-初回起動時にメニューが空の場合は自動でデフォルトのドリンクが登録されます。
+```bash
+# DB移行時（PostgreSQL使用時のみ）
+DATABASE_URL=postgresql://... npm run db:push
+```
