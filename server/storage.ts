@@ -7,7 +7,6 @@ import {
   type InsertOrderItem,
   type OrderWithItems,
   OrderStatus,
-  menuItems,
   orders,
   orderItems,
 } from "@shared/schema";
@@ -49,26 +48,27 @@ export interface IStorage {
 }
 
 // ---------------------------------------------------------------------------
-// PostgreSQL storage (used when DATABASE_URL is set)
+// Menu items are always hardcoded (not stored in DB)
 // ---------------------------------------------------------------------------
 
-const DEFAULT_MENU_ITEMS: InsertMenuItem[] = [
-  { name: "日本酒みかんロック", price: 75000, imageUrl: "", category: "お酒" },
-  { name: "太幸ワイン", price: 80000, imageUrl: "", category: "お酒" },
-  { name: "太幸ワインサングリア", price: 85000, imageUrl: "", category: "お酒" },
-  { name: "ブラッドオレンジ梅酒", price: 78000, imageUrl: "", category: "お酒" },
-  { name: "カシス河内晩柑", price: 78000, imageUrl: "", category: "お酒" },
-  { name: "レモン酎ハイ", price: 70000, imageUrl: "", category: "お酒" },
-  { name: "河内晩柑ジュース", price: 55000, imageUrl: "", category: "ソフトドリンク" },
+const FIXED_MENU_ITEMS: MenuItem[] = [
+  { id: 1, name: "日本酒みかんロック",     price: 75000, imageUrl: "", category: "お酒" },
+  { id: 2, name: "太幸ワイン",             price: 80000, imageUrl: "", category: "お酒" },
+  { id: 3, name: "太幸ワインサングリア",   price: 85000, imageUrl: "", category: "お酒" },
+  { id: 4, name: "ブラッドオレンジ梅酒",   price: 78000, imageUrl: "", category: "お酒" },
+  { id: 5, name: "カシス河内晩柑",         price: 78000, imageUrl: "", category: "お酒" },
+  { id: 6, name: "レモン酎ハイ",           price: 70000, imageUrl: "", category: "お酒" },
+  { id: 7, name: "河内晩柑ジュース",       price: 55000, imageUrl: "", category: "ソフトドリンク" },
 ];
 
+const MENU_MAP = new Map<number, MenuItem>(FIXED_MENU_ITEMS.map((m) => [m.id, m]));
+
 function calcTotalAmount(
-  items: Array<{ menuItemId: number; quantity: number }>,
-  menuItemMap: Map<number, MenuItem>
+  items: Array<{ menuItemId: number; quantity: number }>
 ): number {
   const totalDrinks = items.reduce((sum, i) => sum + i.quantity, 0);
   const softDrinks = items.reduce(
-    (sum, i) => sum + (menuItemMap.get(i.menuItemId)?.category === "ソフトドリンク" ? i.quantity : 0),
+    (sum, i) => sum + (MENU_MAP.get(i.menuItemId)?.category === "ソフトドリンク" ? i.quantity : 0),
     0
   );
 
@@ -81,51 +81,43 @@ function calcTotalAmount(
   return Math.max(0, price - softDrinks * 20000);
 }
 
+// ---------------------------------------------------------------------------
+// PostgreSQL storage — orders & order_items only (used when DATABASE_URL is set)
+// ---------------------------------------------------------------------------
+
 export class DbStorage implements IStorage {
   private db: ReturnType<typeof drizzle>;
 
   constructor() {
-    const url = process.env.DATABASE_URL!;
     const pool = new Pool({
-      connectionString: url,
+      connectionString: process.env.DATABASE_URL!,
       ssl: { rejectUnauthorized: false },
     });
     this.db = drizzle(pool);
-    this.seedMenuItems().catch((err) => console.error("[db] seed failed:", err));
   }
 
-  private async seedMenuItems() {
-    const existing = await this.db.select().from(menuItems);
-    if (existing.length > 0) return;
-    for (const item of DEFAULT_MENU_ITEMS) {
-      await this.db.insert(menuItems).values(item);
-    }
-  }
-
-  async getAllMenuItems() {
-    return this.db.select().from(menuItems);
-  }
-
-  async getMenuItemById(id: number) {
-    const rows = await this.db.select().from(menuItems).where(eq(menuItems.id, id));
-    return rows[0];
-  }
-
+  // Menu items — always from fixed list, never touches DB
+  async getAllMenuItems() { return FIXED_MENU_ITEMS; }
+  async getMenuItemById(id: number) { return MENU_MAP.get(id); }
   async createMenuItem(item: InsertMenuItem) {
-    const rows = await this.db.insert(menuItems).values(item).returning();
-    return rows[0];
+    const id = Math.max(...FIXED_MENU_ITEMS.map((m) => m.id)) + 1;
+    const newItem = { ...item, id };
+    FIXED_MENU_ITEMS.push(newItem);
+    MENU_MAP.set(id, newItem);
+    return newItem;
   }
-
   async updateMenuItem(id: number, item: Partial<InsertMenuItem>) {
-    const rows = await this.db.update(menuItems).set(item).where(eq(menuItems.id, id)).returning();
-    return rows[0];
+    const existing = MENU_MAP.get(id);
+    if (!existing) return undefined;
+    const updated = { ...existing, ...item };
+    MENU_MAP.set(id, updated);
+    return updated;
   }
-
   async deleteMenuItem(id: number) {
-    const rows = await this.db.delete(menuItems).where(eq(menuItems.id, id)).returning();
-    return rows.length > 0;
+    return MENU_MAP.delete(id);
   }
 
+  // Orders — DB
   async getAllOrders() {
     return this.db.select().from(orders);
   }
@@ -162,6 +154,7 @@ export class DbStorage implements IStorage {
     return rows.length > 0;
   }
 
+  // Order items — DB
   async getOrderItemsByOrderId(orderId: number) {
     return this.db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
   }
@@ -176,19 +169,16 @@ export class DbStorage implements IStorage {
     return true;
   }
 
+  // Combined — orders from DB, menu items from fixed list
   async getOrderWithItems(orderId: number): Promise<OrderWithItems | undefined> {
     const order = await this.getOrderById(orderId);
     if (!order) return undefined;
 
     const items = await this.getOrderItemsByOrderId(orderId);
-    const itemsWithDetails = await Promise.all(
-      items.map(async (item) => {
-        const menuItem = await this.getMenuItemById(item.menuItemId);
-        return { ...item, menuItem: menuItem! };
-      })
-    );
-
-    return { ...order, items: itemsWithDetails };
+    return {
+      ...order,
+      items: items.map((item) => ({ ...item, menuItem: MENU_MAP.get(item.menuItemId)! })),
+    };
   }
 
   async getAllOrdersWithItems() {
@@ -204,10 +194,7 @@ export class DbStorage implements IStorage {
     const existing = await this.getOrderById(id);
     if (!existing) return undefined;
 
-    const allMenuItems = await this.getAllMenuItems();
-    const menuItemMap = new Map(allMenuItems.map((m) => [m.id, m]));
-    const totalAmount = calcTotalAmount(items, menuItemMap);
-
+    const totalAmount = calcTotalAmount(items);
     await this.db
       .update(orders)
       .set({ ...orderData, totalAmount, updatedAt: new Date() })
@@ -236,18 +223,13 @@ export class MemStorage implements IStorage {
   private orderNumberCounter: number;
 
   constructor() {
-    this.menuItems = new Map();
+    this.menuItems = new Map(FIXED_MENU_ITEMS.map((m) => [m.id, m]));
     this.orders = new Map();
     this.orderItems = new Map();
-    this.menuItemIdCounter = 1;
+    this.menuItemIdCounter = FIXED_MENU_ITEMS.length + 1;
     this.orderIdCounter = 1;
     this.orderItemIdCounter = 1;
     this.orderNumberCounter = 1000;
-    this.initializeMenuItems();
-  }
-
-  private initializeMenuItems() {
-    DEFAULT_MENU_ITEMS.forEach((item) => this.createMenuItem(item));
   }
 
   async getAllMenuItems(): Promise<MenuItem[]> {
@@ -333,14 +315,10 @@ export class MemStorage implements IStorage {
     if (!order) return undefined;
 
     const items = await this.getOrderItemsByOrderId(orderId);
-    const itemsWithDetails = await Promise.all(
-      items.map(async (item) => {
-        const menuItem = await this.getMenuItemById(item.menuItemId);
-        return { ...item, menuItem: menuItem! };
-      })
-    );
-
-    return { ...order, items: itemsWithDetails };
+    return {
+      ...order,
+      items: items.map((item) => ({ ...item, menuItem: this.menuItems.get(item.menuItemId)! })),
+    };
   }
 
   async getAllOrdersWithItems(): Promise<OrderWithItems[]> {
@@ -356,13 +334,7 @@ export class MemStorage implements IStorage {
     const existing = await this.getOrderById(id);
     if (!existing) return undefined;
 
-    const menuItemMap = new Map(
-      await Promise.all(items.map((i) => this.getMenuItemById(i.menuItemId))).then((ms) =>
-        ms.filter(Boolean).map((m) => [m!.id, m!] as [number, MenuItem])
-      )
-    );
-    const totalAmount = calcTotalAmount(items, menuItemMap);
-
+    const totalAmount = calcTotalAmount(items);
     const updated = { ...existing, ...orderData, totalAmount, updatedAt: new Date() };
     this.orders.set(id, updated);
 
