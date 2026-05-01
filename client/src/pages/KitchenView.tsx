@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { OrderWithItems, OrderStatus } from "@shared/schema";
+import { supabase } from "@/lib/supabaseClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import OrderCard from "@/components/OrderCard";
@@ -10,7 +11,20 @@ type FilterStatus = "all" | OrderStatus;
 
 export default function KitchenView() {
   const [filter, setFilter] = useState<FilterStatus>("in-progress");
-  
+  const queryClient = useQueryClient();
+
+  // Supabase Realtime（Vercel環境のみ）。未設定のRender環境ではポーリングにフォールバック。
+  useEffect(() => {
+    if (!supabase) return;
+    const channel = supabase
+      .channel("orders-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
+
   const { data: orders, isLoading } = useQuery<OrderWithItems[]>({
     queryKey: ["/api/orders"],
     queryFn: async () => {
@@ -20,7 +34,7 @@ export default function KitchenView() {
       }
       return response.json();
     },
-    refetchInterval: 2000, // 2秒ごとに更新
+    refetchInterval: supabase ? false : 2000, // Realtime使用時はポーリング不要
   });
   
   // フィルタリングされた注文
