@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MenuItem } from "@shared/schema";
+import { MENU_ITEMS } from "@shared/menuData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +16,7 @@ export default function MenuGrid() {
   const [quantities, setQuantities] = useState<Record<number, number>>({});
   const { data: menuItems, isLoading } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items"],
+    placeholderData: MENU_ITEMS,
   });
   
   const addItemToCart = useOrderStore((state) => state.addItemToCart);

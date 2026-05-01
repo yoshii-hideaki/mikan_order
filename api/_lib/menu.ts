@@ -1,21 +1,8 @@
-export interface MenuItem {
-  id: number;
-  name: string;
-  price: number;
-  imageUrl: string;
-  category: string;
-}
+import type { MenuItem } from "../../shared/schema";
+import { MENU_ITEMS } from "../../shared/menuData";
 
-export const MENU_ITEMS: MenuItem[] = [
-  { id: 1, name: "日本酒みかんロック",   price: 75000, imageUrl: "", category: "お酒" },
-  { id: 2, name: "太幸ワイン",           price: 80000, imageUrl: "", category: "お酒" },
-  { id: 3, name: "太幸ワインサングリア", price: 85000, imageUrl: "", category: "お酒" },
-  { id: 4, name: "ブラッドオレンジ梅酒", price: 78000, imageUrl: "", category: "お酒" },
-  { id: 5, name: "カシス河内晩柑",       price: 78000, imageUrl: "", category: "お酒" },
-  { id: 6, name: "レモン酎ハイ",         price: 70000, imageUrl: "", category: "お酒" },
-  { id: 7, name: "河内晩柑ジュース",     price: 55000, imageUrl: "", category: "ソフトドリンク" },
-];
-
+export type { MenuItem };
+export { MENU_ITEMS };
 export const MENU_MAP = new Map<number, MenuItem>(MENU_ITEMS.map((m) => [m.id, m]));
 
 export function calcTotalAmount(

@@ -16,13 +16,14 @@ export default function KitchenView() {
   // Supabase Realtime（Vercel環境のみ）。未設定のRender環境ではポーリングにフォールバック。
   useEffect(() => {
     if (!supabase) return;
-    const channel = supabase
+    const client = supabase;
+    const channel = client
       .channel("orders-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
         queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { client.removeChannel(channel); };
   }, [queryClient]);
 
   const { data: orders, isLoading } = useQuery<OrderWithItems[]>({
