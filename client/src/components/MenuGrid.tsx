@@ -14,7 +14,7 @@ type CategoryType = "all" | "お酒" | "ソフトドリンク";
 export default function MenuGrid() {
   const [activeCategory, setActiveCategory] = useState<CategoryType>("all");
   const [quantities, setQuantities] = useState<Record<number, number>>({});
-  const { data: menuItems, isLoading } = useQuery<MenuItem[]>({
+  const { data: menuItems = MENU_ITEMS, isLoading } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items"],
     placeholderData: MENU_ITEMS,
   });

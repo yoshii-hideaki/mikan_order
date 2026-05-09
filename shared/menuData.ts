@@ -1,4 +1,4 @@
-import { MenuItem } from "./schema";
+import type { MenuItem } from "./schema";
 
 export const MENU_ITEMS: MenuItem[] = [
   { id: 1, name: "日本酒みかんロック",   price: 75000, imageUrl: "", category: "お酒" },
