@@ -8,17 +8,21 @@ export const MENU_MAP = new Map<number, MenuItem>(MENU_ITEMS.map((m) => [m.id, m
 export function calcTotalAmount(
   items: Array<{ menuItemId: number; quantity: number }>
 ): number {
-  const totalDrinks = items.reduce((sum, i) => sum + i.quantity, 0);
-  const softDrinks = items.reduce(
+  const alcoholCount = items.reduce(
+    (sum, i) => sum + (MENU_MAP.get(i.menuItemId)?.category !== "ソフトドリンク" ? i.quantity : 0),
+    0
+  );
+  const softDrinkCount = items.reduce(
     (sum, i) => sum + (MENU_MAP.get(i.menuItemId)?.category === "ソフトドリンク" ? i.quantity : 0),
     0
   );
-  const fullSets = Math.floor(totalDrinks / 3);
-  const remainder = totalDrinks % 3;
+  const fullSets = Math.floor(alcoholCount / 3);
+  const remainder = alcoholCount % 3;
   let price = fullSets * 150000;
   if (remainder === 1) price += 70000;
   else if (remainder === 2) price += 120000;
-  return Math.max(0, price - softDrinks * 20000);
+  price += softDrinkCount * 50000; // ¥500 per soft drink (flat rate, not in set)
+  return price;
 }
 
 // Supabaseのsnake_case → フロントのcamelCase変換

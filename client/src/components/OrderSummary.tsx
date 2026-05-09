@@ -10,10 +10,7 @@ export default function OrderSummary() {
   const {
     cartItems,
     removeItemFromCart,
-    updateItemQuantity,
     clearCart,
-    calculateSubtotal,
-    calculateTax,
     calculateTotal,
     createOrder,
   } = useOrderStore();
@@ -104,10 +101,10 @@ export default function OrderSummary() {
             <span>{formatCurrency(calculateTotal())}</span>
           </div>
           <div className="text-xs text-gray-500 mt-1">
-            <span>※ 料金体系: 1杯700円、2杯1200円、3杯1500円</span>
+            <span>※ お酒: 1杯700円、2杯1200円、3杯1500円</span>
           </div>
           <div className="text-xs text-gray-500">
-            <span>※ ソフトドリンクは1杯につき200円引き</span>
+            <span>※ ソフトドリンクは一律500円（セット割り対象外）</span>
           </div>
         </div>
         

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { MenuItem, OrderWithItems, OrderItem, OrderStatus } from '@shared/schema';
+import { MenuItem, OrderWithItems, OrderStatus } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { queryClient } from '@/lib/queryClient';
 
@@ -77,38 +77,34 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   calculateSubtotal: () => {
     const { cartItems } = get();
     
-    // すべてのドリンクの数を数える
-    const totalDrinks = cartItems.reduce(
-      (total, item) => total + item.quantity,
+    // お酒の数を数える（セット割り対象）
+    const alcoholCount = cartItems.reduce(
+      (total, item) => total + (item.menuItem.category !== "ソフトドリンク" ? item.quantity : 0),
       0
     );
-    
-    // ソフトドリンクの数を数える（後で値引き用）
-    const softDrinks = cartItems.reduce(
+
+    // ソフトドリンクの数を数える（一律500円）
+    const softDrinkCount = cartItems.reduce(
       (total, item) => total + (item.menuItem.category === "ソフトドリンク" ? item.quantity : 0),
       0
     );
-    
-    // 通常の料金計算: 1杯700円、2杯1200円、3杯1500円
+
+    // お酒のセット割り計算: 1杯700円、2杯1200円、3杯1500円
     let price = 0;
-    const fullSets = Math.floor(totalDrinks / 3);
-    const remainder = totalDrinks % 3;
-    
-    // 3杯セットの価格を加算
-    price += fullSets * 150000; // 1500円を100倍した値（セント表記）
-    
-    // 残りの杯数の価格を加算
+    const fullSets = Math.floor(alcoholCount / 3);
+    const remainder = alcoholCount % 3;
+
+    price += fullSets * 150000; // 1500円
     if (remainder === 1) {
-      price += 70000; // 700円を100倍
+      price += 70000; // 700円
     } else if (remainder === 2) {
-      price += 120000; // 1200円を100倍
+      price += 120000; // 1200円
     }
-    
-    // ソフトドリンクの値引き：1杯につき200円引き
-    const discount = softDrinks * 20000; // 200円 × ソフトドリンクの杯数
-    
-    // 値引き後の価格を返す
-    return Math.max(0, price - discount); // マイナスにならないように0以上を保証
+
+    // ソフトドリンクは一律500円（セット割り対象外）
+    price += softDrinkCount * 50000;
+
+    return price;
   },
   
   calculateTax: () => {
