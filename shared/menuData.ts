@@ -6,6 +6,7 @@ export const MENU_ITEMS: MenuItem[] = [
   { id: 3, name: "太幸ワインサングリア", price: 85000, imageUrl: "", category: "お酒" },
   { id: 4, name: "ブラッドオレンジ梅酒", price: 78000, imageUrl: "", category: "お酒" },
   { id: 5, name: "カシス河内晩柑",       price: 78000, imageUrl: "", category: "お酒" },
-  { id: 6, name: "レモン酎ハイ",         price: 70000, imageUrl: "", category: "お酒" },
+  { id: 6, name: "ドラゴンせとか",       price: 78000, imageUrl: "", category: "お酒" },
   { id: 7, name: "河内晩柑ジュース",     price: 50000, imageUrl: "", category: "ソフトドリンク" },
+  { id: 8, name: "せとかジュース",       price: 50000, imageUrl: "", category: "ソフトドリンク" },
 ];

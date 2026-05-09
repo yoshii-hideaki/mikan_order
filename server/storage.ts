@@ -95,14 +95,20 @@ export class MemStorage implements IStorage {
         category: "お酒",
       },
       {
-        name: "レモン酎ハイ",
-        price: 70000, // ¥700
+        name: "ドラゴンせとか",
+        price: 78000, // ¥780
         imageUrl: "",
         category: "お酒",
       },
       {
         name: "河内晩柑ジュース",
-        price: 55000, // ¥550
+        price: 50000, // ¥500
+        imageUrl: "",
+        category: "ソフトドリンク",
+      },
+      {
+        name: "せとかジュース",
+        price: 50000, // ¥500
         imageUrl: "",
         category: "ソフトドリンク",
       },
