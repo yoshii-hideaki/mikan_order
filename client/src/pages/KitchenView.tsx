@@ -28,7 +28,7 @@ function playDing() {
       osc.frequency.value = freq;
       const t = ctx.currentTime + delay;
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.7, t + 0.01);  // 音量 0.25→0.7
+      gain.gain.linearRampToValueAtTime(1.0, t + 0.01);
       gain.gain.exponentialRampToValueAtTime(0.001, t + 1.2); // 持続 0.45→1.2秒
       osc.start(t);
       osc.stop(t + 1.2);
