@@ -13,20 +13,25 @@ type FilterStatus = "all" | OrderStatus;
 function playDing() {
   try {
     const ctx = new AudioContext();
-    const freqs = [880, 1100];
-    freqs.forEach((freq, i) => {
+    // 3音: ド・ミ・ソ の和音的な上昇チャイム
+    const notes = [
+      { freq: 660, delay: 0 },
+      { freq: 880, delay: 0.22 },
+      { freq: 1100, delay: 0.44 },
+    ];
+    notes.forEach(({ freq, delay }) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.type = "sine";
       osc.frequency.value = freq;
-      const t = ctx.currentTime + i * 0.18;
+      const t = ctx.currentTime + delay;
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.25, t + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+      gain.gain.linearRampToValueAtTime(0.7, t + 0.01);  // 音量 0.25→0.7
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 1.2); // 持続 0.45→1.2秒
       osc.start(t);
-      osc.stop(t + 0.45);
+      osc.stop(t + 1.2);
     });
   } catch {
     // ブラウザが AudioContext に対応していない場合は無視
