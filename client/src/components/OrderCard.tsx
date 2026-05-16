@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { OrderWithItems, OrderStatus } from "@shared/schema";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,15 @@ const statusColorMap = {
 
 export default function OrderCard({ order }: OrderCardProps) {
   const updateOrderStatus = useOrderStore((state) => state.updateOrderStatus);
+  const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set());
+
+  const toggleCheck = (itemId: number) => {
+    setCheckedItems(prev => {
+      const next = new Set(prev);
+      next.has(itemId) ? next.delete(itemId) : next.add(itemId);
+      return next;
+    });
+  };
   
   // デフォルト値を設定して、存在しないステータスでもエラーにならないようにする
   const status = (order.status === "in-progress" || order.status === "ready") ? 
@@ -72,15 +82,32 @@ export default function OrderCard({ order }: OrderCardProps) {
       
       <div className="p-4">
         <div className="space-y-3 mb-4">
-          {order.items?.map((item) => (
-            <div 
-              key={item.id}
-              className={`flex justify-between py-2 border-b ${statusColors.divider}`}
-            >
-              <span className="font-medium text-lg">{item.menuItem.name}</span>
-              <span className="text-lg">× {item.quantity}</span>
-            </div>
-          ))}
+          {order.items?.map((item) => {
+            const checked = checkedItems.has(item.id);
+            return (
+              <div
+                key={item.id}
+                className={`flex items-center justify-between py-2 border-b ${statusColors.divider} cursor-pointer select-none`}
+                onClick={() => toggleCheck(item.id)}
+              >
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleCheck(item.id)}
+                    onClick={e => e.stopPropagation()}
+                    className="w-5 h-5 accent-green-600 cursor-pointer flex-shrink-0"
+                  />
+                  <span className={`font-medium text-lg transition-colors ${checked ? "line-through text-gray-400" : ""}`}>
+                    {item.menuItem.name}
+                  </span>
+                </div>
+                <span className={`text-lg transition-colors ${checked ? "text-gray-400" : ""}`}>
+                  × {item.quantity}
+                </span>
+              </div>
+            );
+          })}
         </div>
         
         <div className="flex justify-between mt-4">
